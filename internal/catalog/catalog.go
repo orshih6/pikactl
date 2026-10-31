@@ -113,30 +113,74 @@ func (s *Store) ttl() time.Duration {
 
 // List returns every operation, from the cache while it is fresh.
 func (s *Store) List(ctx context.Context, refresh bool) ([]Op, error) {
-	const name = "catalog.json"
+	return cachedList(s, ctx, "catalog.json", "/catalog/apis", "the catalog", refresh, parseList)
+}
+
+// cachedList reads a public list from the cache while it is fresh, and falls
+// back to a stale copy, said out loud, when the API cannot answer.
+func cachedList[T any](s *Store, ctx context.Context, name, path, what string, refresh bool, parse func([]byte) (T, error)) (T, error) {
 	if !refresh {
 		if data, ok := s.readCache(name, s.ttl()); ok {
-			if ops, err := parseList(data); err == nil {
-				return ops, nil
+			if v, err := parse(data); err == nil {
+				return v, nil
 			}
 		}
 	}
-	resp, err := s.API.Do(ctx, api.Request{Method: http.MethodGet, Path: "/catalog/apis"})
+	var zero T
+	resp, err := s.API.Do(ctx, api.Request{Method: http.MethodGet, Path: path})
 	if err != nil {
 		if data, ok := s.readCache(name, 0); ok {
-			if ops, perr := parseList(data); perr == nil {
-				s.warn("using the saved catalog, the API could not answer: %v", err)
-				return ops, nil
+			if v, perr := parse(data); perr == nil {
+				s.warn("using the saved copy of %s, the API could not answer: %v", what, err)
+				return v, nil
 			}
 		}
-		return nil, err
+		return zero, err
 	}
-	ops, err := parseList(resp.Body)
+	v, err := parse(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading the catalog: %w", err)
+		return zero, fmt.Errorf("reading %s: %w", what, err)
 	}
 	s.writeCache(name, resp.Body)
-	return ops, nil
+	return v, nil
+}
+
+// Competitors is Pika's published pricing of other providers for the same
+// operations, row by row.
+type Competitors struct {
+	RecordedAt  string `json:"recorded_at"`
+	Competitors []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+		Kind string `json:"kind"`
+	} `json:"competitors"`
+	Rows []CompetitorRow `json:"rows"`
+}
+
+// CompetitorRow is what others charge for one operation at one setting.
+type CompetitorRow struct {
+	APIID  string         `json:"api_id"`
+	Spec   map[string]any `json:"spec"`
+	Quotes []struct {
+		Competitor string `json:"competitor"`
+		USD        string `json:"usd"`
+		Unit       string `json:"unit"`
+	} `json:"quotes"`
+}
+
+// SpecLabel is the row's setting, such as "resolution=720p".
+func (r CompetitorRow) SpecLabel() string { return specLabel(r.Spec) }
+
+// Competitors returns Pika's competitor pricing, from the cache while it is fresh.
+func (s *Store) Competitors(ctx context.Context, refresh bool) (*Competitors, error) {
+	return cachedList(s, ctx, "competitors.json", "/catalog/competitors", "the competitor pricing", refresh,
+		func(data []byte) (*Competitors, error) {
+			var c Competitors
+			if err := json.Unmarshal(data, &c); err != nil {
+				return nil, err
+			}
+			return &c, nil
+		})
 }
 
 func parseList(data []byte) ([]Op, error) {
@@ -374,6 +418,9 @@ type pricing struct {
 		StartingAt *tier  `json:"starting_at"`
 		PriceTiers []tier `json:"price_tiers"`
 	} `json:"components"`
+	// Some prices have no fixed rate, only a rule in words: draft-to-video
+	// costs the final price minus what the draft already cost.
+	Description string `json:"description"`
 }
 
 type tier struct {
@@ -392,10 +439,17 @@ func unitLabel(kind string, quantity int64) string {
 	return label
 }
 
-// PriceFrom is a one-line starting price, such as "$0.01/second".
+// PriceFrom is a one-line starting price, such as "$0.01/second", or "quote"
+// when the price depends on the request and has no fixed rate.
 func (o *Op) PriceFrom() string {
 	var p pricing
-	if json.Unmarshal(o.Pricing, &p) != nil || len(p.Components) == 0 {
+	if json.Unmarshal(o.Pricing, &p) != nil {
+		return ""
+	}
+	if len(p.Components) == 0 {
+		if p.Description != "" {
+			return "quote"
+		}
 		return ""
 	}
 	c := p.Components[0]
@@ -421,7 +475,54 @@ func (o *Op) PriceLines() []string {
 			lines = append(lines, line)
 		}
 	}
+	if len(lines) == 0 && p.Description != "" {
+		lines = append(lines, p.Description)
+	}
 	return lines
+}
+
+// PriceAt is the price tier for this setting, such as "$0.02/second" for
+// resolution=768p. A tier may name more settings than spec does (mode=standard
+// beside the resolution); when several such tiers fit, the lowest is given as
+// "from $…". It is "" when no tier fits.
+func (o *Op) PriceAt(spec map[string]any) string {
+	var p pricing
+	if json.Unmarshal(o.Pricing, &p) != nil {
+		return ""
+	}
+	want := specLabel(spec)
+	best, fits := "", 0
+	var bestMicro int64
+	for _, c := range p.Components {
+		for _, t := range c.PriceTiers {
+			price := output.USD(t.MicroUSD) + "/" + unitLabel(c.Unit.Type, c.Unit.Quantity)
+			if specLabel(t.Spec) == want {
+				return price
+			}
+			if !specCovers(t.Spec, spec) {
+				continue
+			}
+			fits++
+			if fits == 1 || t.MicroUSD < bestMicro {
+				best, bestMicro = price, t.MicroUSD
+			}
+		}
+	}
+	if fits > 1 {
+		return "from " + best
+	}
+	return best
+}
+
+// specCovers reports whether tier names every setting in spec, with the same value.
+func specCovers(tier, spec map[string]any) bool {
+	for k, v := range spec {
+		tv, ok := tier[k]
+		if !ok || fmt.Sprint(tv) != fmt.Sprint(v) {
+			return false
+		}
+	}
+	return true
 }
 
 func specLabel(spec map[string]any) string {

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -57,6 +59,9 @@ func newModelsCommand() *cobra.Command {
 					return err
 				}
 				a.logf("%d of %d operations", len(rows), len(ops))
+				if len(rows) == 0 && category != "" {
+					a.logf("categories: %s", strings.Join(categories(ops), ", "))
+				}
 				return nil
 			})
 		},
@@ -67,9 +72,111 @@ func newModelsCommand() *cobra.Command {
 	cmd.AddCommand(
 		newModelsShowCommand(),
 		newModelsDocsCommand(),
-		endpoint{use: "competitors", short: "List Pika's published competitor pricing", method: "GET", path: "/catalog/competitors"}.command(),
+		newModelsCompetitorsCommand(),
 	)
 	return cmd
+}
+
+// categories lists the categories present in the catalog, in order.
+func categories(ops []catalog.Op) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, op := range ops {
+		if op.Category != "" && !seen[op.Category] {
+			seen[op.Category] = true
+			out = append(out, op.Category)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func newModelsCompetitorsCommand() *cobra.Command {
+	var refresh bool
+	cmd := &cobra.Command{
+		Use:   "competitors [filter]",
+		Short: "Compare Pika's prices with what others charge for the same operation",
+		Long: "Compare Pika's price for an operation and setting with the other providers'\n" +
+			"prices that Pika publishes. It is public, so this needs no key. The filter\n" +
+			"matches any part of an operation ID; --json prints every quote in each row.",
+		Example: `  pikactl models competitors
+  pikactl models competitors seedance`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			a, err := newApp(cmd)
+			if err != nil {
+				return err
+			}
+			comp, err := a.catalog.Competitors(cmd.Context(), refresh)
+			if err != nil {
+				return err
+			}
+			filter := ""
+			if len(args) == 1 {
+				filter = strings.ToLower(args[0])
+			}
+			matched := comp.Rows[:0:0]
+			for _, row := range comp.Rows {
+				if filter == "" || strings.Contains(strings.ToLower(row.APIID), filter) {
+					matched = append(matched, row)
+				}
+			}
+			total := len(comp.Rows)
+			comp.Rows = matched
+			return emit(a.out, comp, func() error {
+				// Pika's own prices come from the catalog; without it the
+				// other providers' prices are still worth showing.
+				byID := map[string]*catalog.Op{}
+				if ops, err := a.catalog.List(cmd.Context(), refresh); err == nil {
+					for i := range ops {
+						byID[ops[i].ID] = &ops[i]
+					}
+				}
+				names := map[string]string{}
+				for _, c := range comp.Competitors {
+					names[c.ID] = c.Name
+				}
+				rows := make([][]string, 0, len(matched))
+				for _, row := range matched {
+					pika := ""
+					if op := byID[row.APIID]; op != nil {
+						pika = op.PriceAt(row.Spec)
+					}
+					rows = append(rows, []string{row.APIID, row.SpecLabel(), pika, cheapest(row, names), strconv.Itoa(len(row.Quotes))})
+				}
+				if err := output.Table(a.out, []string{"ID", "SETTING", "PIKA", "CHEAPEST ELSEWHERE", "OTHERS"}, rows); err != nil {
+					return err
+				}
+				a.logf("%d of %d rows, recorded %s", len(matched), total, comp.RecordedAt)
+				return nil
+			})
+		},
+	}
+	cmd.Flags().BoolVar(&refresh, "refresh", false, "ask the API instead of using the saved list")
+	return cmd
+}
+
+// cheapest names the lowest of the other providers' prices in a row.
+func cheapest(row catalog.CompetitorRow, names map[string]string) string {
+	best, bestUSD := -1, 0.0
+	for i, q := range row.Quotes {
+		usd, err := strconv.ParseFloat(q.USD, 64)
+		if err != nil {
+			continue
+		}
+		if best < 0 || usd < bestUSD {
+			best, bestUSD = i, usd
+		}
+	}
+	if best < 0 {
+		return ""
+	}
+	q := row.Quotes[best]
+	name := names[q.Competitor]
+	if name == "" {
+		name = q.Competitor
+	}
+	return fmt.Sprintf("%s $%s/%s", name, q.USD, q.Unit)
 }
 
 func newModelsShowCommand() *cobra.Command {

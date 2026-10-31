@@ -1,0 +1,82 @@
+{
+ "api_id": "pika/pika-h3-flex/draft-to-video",
+ "vendor": "pika",
+ "function": "draft-to-video",
+ "category": "video",
+ "name": "Pika H3 Flex Draft to Video",
+ "display_pricing": {
+  "components": [],
+  "mode": "flex_draft_difference",
+  "description": "Direct final-generation price minus the amount paid for an owned draft, or minus the measured video's fitted 480p/768p generation rate. Supply a draft or video for an exact quote."
+ },
+ "call": {
+  "method": "POST",
+  "path": "/v1/media/pika/pika-h3-flex/draft-to-video"
+ },
+ "input_schema": {
+  "additionalProperties": false,
+  "oneOf": [
+   {
+    "properties": {
+     "draft_job_id": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "draft_job_id"
+    ]
+   },
+   {
+    "properties": {
+     "video": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "video"
+    ]
+   }
+  ],
+  "properties": {
+   "draft_job_id": {
+    "anyOf": [
+     {
+      "maxLength": 128,
+      "minLength": 1,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "video": {
+    "anyOf": [
+     {
+      "maxLength": 2083,
+      "media_kinds": [
+       "video"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "resolution": {
+    "default": "2k",
+    "enum": [
+     "1080p",
+     "2k",
+     "4k"
+    ],
+    "type": "string"
+   }
+  },
+  "type": "object"
+ }
+}

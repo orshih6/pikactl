@@ -147,6 +147,10 @@ func (f *fakePika) serveAPI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fmt.Fprintf(w, `{"sell_usd":"x","micro_usd":%d}`, f.quote)
+	case path == "/catalog/competitors":
+		fmt.Fprintf(w, `{"recorded_at":"2026-10-24","competitors":[{"id":"fal","name":"fal","kind":"aggregator"},{"id":"runway","name":"Runway","kind":"official"}],
+			"rows":[{"api_id":"%s","spec":{"resolution":"480p"},"quotes":[{"competitor":"runway","usd":"0.3","unit":"second"},{"competitor":"fal","usd":"0.14","unit":"second"}]},
+			{"api_id":"pika/other/text-to-video","spec":{},"quotes":[]}]}`, testOp)
 	case strings.HasPrefix(path, "/catalog/"):
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = io.WriteString(w, `{"message":"Catalog API not found"}`)
@@ -1057,6 +1061,36 @@ func TestSavedCatalogIsUsedWhenTheAPIIsDown(t *testing.T) {
 	}
 	if !strings.Contains(errOut, "saved") {
 		t.Errorf("using a stale copy should be said out loud: %s", errOut)
+	}
+}
+
+func TestCompetitorsSetPikaBesideTheCheapestOther(t *testing.T) {
+	newFake(t)
+	t.Setenv("PIKA_API_KEY", "")
+	out, errOut := mustRun(t, "models", "competitors", "test")
+	lines := strings.Split(strings.TrimSpace(out), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("the filter should keep one row: %s", out)
+	}
+	for _, want := range []string{testOp, "resolution=480p", "$0.01/second", "fal $0.14/second", "2"} {
+		if !strings.Contains(lines[1], want) {
+			t.Errorf("row lacks %q: %s", want, lines[1])
+		}
+	}
+	if !strings.Contains(errOut, "1 of 2 rows") {
+		t.Errorf("stderr = %s", errOut)
+	}
+	out, _ = mustRun(t, "--json", "models", "competitors", "test")
+	if !strings.Contains(out, `"competitor": "runway"`) || strings.Contains(out, "pika/other") {
+		t.Errorf("json = %s", out)
+	}
+}
+
+func TestUnknownCategoryNamesTheRealOnes(t *testing.T) {
+	newFake(t)
+	_, errOut := mustRun(t, "models", "--category", "nonsense")
+	if !strings.Contains(errOut, "categories: llm, video") {
+		t.Errorf("stderr = %s", errOut)
 	}
 }
 

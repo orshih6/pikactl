@@ -62,6 +62,7 @@ Browsing the catalog and getting quotes are free and need no key at all.
 
 ```sh
 pikactl models --category video                 # what is available, from what price
+pikactl models competitors seedance             # Pika's price beside other providers'
 pikactl run pika/pika-h3-flex/text-to-video --help   # that operation's inputs and prices
 pikactl quote pika/pika-h3-flex/text-to-video --prompt test --duration 10    # $0.20
 
@@ -149,7 +150,7 @@ points.
 | `models [filter]` | List operations and starting prices (`--category`, `--vendor`, `--refresh`) |
 | `models show <id>` | An operation's prices and inputs |
 | `models docs <id>` | An operation's full specification from Pika's docs |
-| `models competitors` | Pika's published competitor pricing |
+| `models competitors [filter]` | Pika's price beside the cheapest other provider's, per operation and setting |
 | `run <id> …` | Run any job: quote, ask, submit, wait, save, record |
 | `quote <id> …` | Price a request and validate it, for free |
 | `chat <model> [prompt]` | Ask a language model, over whichever protocol it uses |

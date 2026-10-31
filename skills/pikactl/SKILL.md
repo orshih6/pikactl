@@ -52,6 +52,7 @@ stop; `rate_limited` means wait and try again; `invalid_input` means fix the req
 ```bash
 pikactl models --category video                  # what exists, from what price
 pikactl models seedance                          # or search by name
+pikactl models competitors seedance              # Pika's price beside other providers'
 pikactl run pika/pika-h3-flex/text-to-video --help     # this model's inputs and prices, live
 
 pikactl quote pika/pika-h3-flex/text-to-video --prompt "a paper boat" --duration 5

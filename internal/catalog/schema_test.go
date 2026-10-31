@@ -331,6 +331,45 @@ func TestPrices(t *testing.T) {
 	}
 }
 
+func TestPriceAt(t *testing.T) {
+	op, _ := loadOp(t, "pika_pika-h3-flex_text-to-video")
+	for _, c := range []struct {
+		spec map[string]any
+		want string
+	}{
+		{map[string]any{"resolution": "768p"}, "$0.02/second"},
+		{map[string]any{"resolution": "8k"}, ""},
+		{map[string]any{}, "from $0.01/second"},
+	} {
+		if got := op.PriceAt(c.spec); got != c.want {
+			t.Errorf("PriceAt(%v) = %q, want %q", c.spec, got, c.want)
+		}
+	}
+	// A tier that names more settings than the row still fits it.
+	extra := &Op{Pricing: json.RawMessage(`{"components":[{"unit":{"type":"second","quantity":1},"price_tiers":[
+		{"spec":{"resolution":"480p","mode":"fast"},"micro_usd":30000},
+		{"spec":{"resolution":"480p","mode":"standard"},"micro_usd":50000},
+		{"spec":{"resolution":"720p","mode":"standard"},"micro_usd":70000}]}]}`)}
+	if got := extra.PriceAt(map[string]any{"resolution": "720p"}); got != "$0.07/second" {
+		t.Errorf("one fitting tier = %q", got)
+	}
+	if got := extra.PriceAt(map[string]any{"resolution": "480p"}); got != "from $0.03/second" {
+		t.Errorf("two fitting tiers = %q", got)
+	}
+}
+
+// A price with no fixed rate is described in words; show those rather than nothing.
+func TestPriceWithoutRate(t *testing.T) {
+	op, _ := loadOp(t, "pika_pika-h3-flex_draft-to-video")
+	if got := op.PriceFrom(); got != "quote" {
+		t.Errorf("PriceFrom = %q", got)
+	}
+	lines := op.PriceLines()
+	if len(lines) != 1 || !strings.Contains(lines[0], "minus the amount paid") {
+		t.Errorf("PriceLines = %v", lines)
+	}
+}
+
 func TestParseEndpoint(t *testing.T) {
 	spec := "# Model\n\n## Endpoint\n\n```\nPOST https://api.dev.pika.art/anthropic/v1/messages\n```\n\n" +
 		"Required headers:\n- `anthropic-version: 2023-06-01`\n\n## Request\n- `not-a-header: nope`\n"
