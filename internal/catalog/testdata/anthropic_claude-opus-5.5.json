@@ -1,0 +1,117 @@
+{
+ "api_id": "anthropic/claude-opus-5.5",
+ "vendor": "anthropic",
+ "function": null,
+ "category": "llm",
+ "name": "Claude Opus 5.5",
+ "display_pricing": {
+  "components": [
+   {
+    "name": "input",
+    "role": "input",
+    "unit": {
+     "type": "input_token",
+     "quantity": 1000000,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "4.2",
+     "micro_usd": 4200000
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "4.2",
+      "micro_usd": 4200000
+     }
+    ]
+   },
+   {
+    "name": "output",
+    "role": "output",
+    "unit": {
+     "type": "output_token",
+     "quantity": 1000000,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "21",
+     "micro_usd": 21000000
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "21",
+      "micro_usd": 21000000
+     }
+    ]
+   },
+   {
+    "name": "cached_input",
+    "role": "input",
+    "unit": {
+     "type": "cached_input_token",
+     "quantity": 1000000,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "0.21",
+     "micro_usd": 210000
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "0.21",
+      "micro_usd": 210000
+     }
+    ]
+   },
+   {
+    "name": "cache_write_5m",
+    "role": "input",
+    "unit": {
+     "type": "cache_write_5m_token",
+     "quantity": 1000000,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "5.25",
+     "micro_usd": 5250000
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "5.25",
+      "micro_usd": 5250000
+     }
+    ]
+   },
+   {
+    "name": "cache_write_1h",
+    "role": "input",
+    "unit": {
+     "type": "cache_write_1h_token",
+     "quantity": 1000000,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "8.4",
+     "micro_usd": 8400000
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "8.4",
+      "micro_usd": 8400000
+     }
+    ]
+   }
+  ]
+ },
+ "input_schema": {}
+}

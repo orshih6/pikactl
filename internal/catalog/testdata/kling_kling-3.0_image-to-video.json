@@ -1,0 +1,284 @@
+{
+ "api_id": "kling/kling-3.0/image-to-video",
+ "vendor": "kling",
+ "function": "image-to-video",
+ "category": "video",
+ "name": "Kling 3.0 (Image to Video)",
+ "display_pricing": {
+  "components": [
+   {
+    "role": "output",
+    "unit": {
+     "type": "second",
+     "quantity": 1,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {
+      "resolution": "720p",
+      "audio": "off"
+     },
+     "sell_usd": "0.068",
+     "micro_usd": 68000
+    },
+    "price_tiers": [
+     {
+      "spec": {
+       "resolution": "720p",
+       "audio": "off"
+      },
+      "sell_usd": "0.068",
+      "micro_usd": 68000
+     },
+     {
+      "spec": {
+       "resolution": "1080p",
+       "audio": "off"
+      },
+      "sell_usd": "0.09",
+      "micro_usd": 90000
+     },
+     {
+      "spec": {
+       "resolution": "720p",
+       "audio": "on"
+      },
+      "sell_usd": "0.101",
+      "micro_usd": 101000
+     },
+     {
+      "spec": {
+       "resolution": "1080p",
+       "audio": "on"
+      },
+      "sell_usd": "0.135",
+      "micro_usd": 135000
+     },
+     {
+      "spec": {
+       "resolution": "4k"
+      },
+      "sell_usd": "0.336",
+      "micro_usd": 336000
+     }
+    ]
+   }
+  ]
+ },
+ "call": {
+  "method": "POST",
+  "path": "/v1/media/kling/kling-3.0/image-to-video"
+ },
+ "input_schema": {
+  "$defs": {
+   "KlingImageElement": {
+    "additionalProperties": false,
+    "properties": {
+     "type": {
+      "const": "element",
+      "type": "string"
+     },
+     "id": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "frontal_image_url": {
+      "media_kinds": [
+       "image"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     },
+     "reference_image_urls": {
+      "items": {
+       "media_kinds": [
+        "image"
+       ],
+       "pattern": "^https?://",
+       "type": "string"
+      },
+      "maxItems": 3,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "type",
+     "id",
+     "frontal_image_url",
+     "reference_image_urls"
+    ],
+    "type": "object"
+   },
+   "KlingPresetElement": {
+    "additionalProperties": false,
+    "properties": {
+     "type": {
+      "const": "preset_element",
+      "type": "string"
+     },
+     "id": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "element_id": {
+      "minLength": 1,
+      "type": "string"
+     }
+    },
+    "required": [
+     "type",
+     "id",
+     "element_id"
+    ],
+    "type": "object"
+   },
+   "KlingVideoElement": {
+    "additionalProperties": false,
+    "properties": {
+     "type": {
+      "const": "video_element",
+      "type": "string"
+     },
+     "id": {
+      "minLength": 1,
+      "type": "string"
+     },
+     "video_url": {
+      "media_kinds": [
+       "video"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     }
+    },
+    "required": [
+     "type",
+     "id",
+     "video_url"
+    ],
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "image_url": {
+    "media_kinds": [
+     "image"
+    ],
+    "pattern": "^https?://",
+    "type": "string"
+   },
+   "prompt": {
+    "anyOf": [
+     {
+      "maxLength": 3072,
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "last_frame_url": {
+    "anyOf": [
+     {
+      "media_kinds": [
+       "image"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "elements": {
+    "anyOf": [
+     {
+      "items": {
+       "discriminator": {
+        "mapping": {
+         "element": "#/$defs/KlingImageElement",
+         "preset_element": "#/$defs/KlingPresetElement",
+         "video_element": "#/$defs/KlingVideoElement"
+        },
+        "propertyName": "type"
+       },
+       "oneOf": [
+        {
+         "$ref": "#/$defs/KlingImageElement"
+        },
+        {
+         "$ref": "#/$defs/KlingVideoElement"
+        },
+        {
+         "$ref": "#/$defs/KlingPresetElement"
+        }
+       ]
+      },
+      "maxItems": 3,
+      "type": "array"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "watermark": {
+    "anyOf": [
+     {
+      "type": "boolean"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "duration": {
+    "default": 5,
+    "maximum": 15,
+    "minimum": 3,
+    "type": "integer"
+   },
+   "resolution": {
+    "default": "720p",
+    "enum": [
+     "720p",
+     "1080p",
+     "4k"
+    ],
+    "type": "string"
+   },
+   "audio": {
+    "default": "off",
+    "enum": [
+     "native",
+     "off"
+    ],
+    "native_audio": true,
+    "type": "string"
+   },
+   "multi_shot": {
+    "anyOf": [
+     {
+      "type": "boolean"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   }
+  },
+  "required": [
+   "image_url"
+  ],
+  "type": "object"
+ }
+}

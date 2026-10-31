@@ -1,0 +1,128 @@
+{
+ "api_id": "pika/video-merge/merge-videos",
+ "vendor": "pika",
+ "function": "merge-videos",
+ "category": "video",
+ "name": "Pika Video Merge",
+ "display_pricing": {
+  "components": [
+   {
+    "role": "output",
+    "unit": {
+     "type": "second",
+     "quantity": 1,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "0.0002",
+     "micro_usd": 200
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "0.0002",
+      "micro_usd": 200
+     }
+    ]
+   }
+  ]
+ },
+ "call": {
+  "method": "POST",
+  "path": "/v1/media/pika/video-merge/merge-videos"
+ },
+ "input_schema": {
+  "$defs": {
+   "VideoDimensions": {
+    "additionalProperties": false,
+    "properties": {
+     "width": {
+      "maximum": 2048,
+      "minimum": 512,
+      "multipleOf": 2,
+      "type": "integer"
+     },
+     "height": {
+      "maximum": 2048,
+      "minimum": 512,
+      "multipleOf": 2,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "width",
+     "height"
+    ],
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "videos": {
+    "items": {
+     "maxLength": 4096,
+     "media_kinds": [
+      "video"
+     ],
+     "pattern": "^https?://",
+     "type": "string"
+    },
+    "maxItems": 10,
+    "minItems": 2,
+    "type": "array"
+   },
+   "target_fps": {
+    "anyOf": [
+     {
+      "maximum": 60,
+      "minimum": 1,
+      "type": "number"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "resolution": {
+    "anyOf": [
+     {
+      "$ref": "#/$defs/VideoDimensions"
+     },
+     {
+      "enum": [
+       "square_hd",
+       "square",
+       "portrait_4_3",
+       "portrait_16_9",
+       "landscape_4_3",
+       "landscape_16_9"
+      ],
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "reference_video_index": {
+    "anyOf": [
+     {
+      "minimum": 0,
+      "type": "integer"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   }
+  },
+  "required": [
+   "videos"
+  ],
+  "type": "object"
+ }
+}

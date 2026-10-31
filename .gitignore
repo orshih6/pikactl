@@ -1,0 +1,9 @@
+/pikactl
+/bin/
+/dist/
+
+# Keys, generated media and history never belong in the repo.
+config.yaml
+.env
+*.mp4
+*.jsonl

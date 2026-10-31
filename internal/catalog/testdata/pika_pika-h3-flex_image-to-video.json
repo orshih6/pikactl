@@ -1,0 +1,204 @@
+{
+ "api_id": "pika/pika-h3-flex/image-to-video",
+ "vendor": "pika",
+ "function": "image-to-video",
+ "category": "video",
+ "name": "Pika H3 Flex",
+ "display_pricing": {
+  "components": [
+   {
+    "role": "output",
+    "unit": {
+     "type": "second",
+     "quantity": 1,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {
+      "resolution": "480p"
+     },
+     "sell_usd": "0.01",
+     "micro_usd": 10000
+    },
+    "price_tiers": [
+     {
+      "spec": {
+       "resolution": "480p"
+      },
+      "sell_usd": "0.01",
+      "micro_usd": 10000
+     },
+     {
+      "spec": {
+       "resolution": "768p"
+      },
+      "sell_usd": "0.02",
+      "micro_usd": 20000
+     },
+     {
+      "spec": {
+       "resolution": "1080p"
+      },
+      "sell_usd": "0.035",
+      "micro_usd": 35000
+     },
+     {
+      "spec": {
+       "resolution": "2k"
+      },
+      "sell_usd": "0.04",
+      "micro_usd": 40000
+     },
+     {
+      "spec": {
+       "resolution": "4k"
+      },
+      "sell_usd": "0.08",
+      "micro_usd": 80000
+     }
+    ]
+   }
+  ]
+ },
+ "call": {
+  "method": "POST",
+  "path": "/v1/media/pika/pika-h3-flex/image-to-video"
+ },
+ "input_schema": {
+  "additionalProperties": false,
+  "anyOf": [
+   {
+    "properties": {
+     "image": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "image"
+    ]
+   },
+   {
+    "properties": {
+     "last_frame_image": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "last_frame_image"
+    ]
+   }
+  ],
+  "native_audio": true,
+  "properties": {
+   "prompt": {
+    "maxLength": 8000,
+    "minLength": 1,
+    "type": "string"
+   },
+   "duration": {
+    "default": 5,
+    "maximum": 15,
+    "minimum": 5,
+    "type": "integer"
+   },
+   "aspect_ratio": {
+    "anyOf": [
+     {
+      "enum": [
+       "auto",
+       "21:9",
+       "16:9",
+       "3:2",
+       "4:3",
+       "5:4",
+       "1:1",
+       "4:5",
+       "3:4",
+       "2:3",
+       "9:16",
+       "9:21"
+      ],
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "resolution": {
+    "default": "768p",
+    "enum": [
+     "480p",
+     "768p",
+     "1080p",
+     "2k",
+     "4k"
+    ],
+    "type": "string"
+   },
+   "seed": {
+    "default": 0,
+    "maximum": 9223372036854775807,
+    "minimum": 0,
+    "type": "integer"
+   },
+   "rewrite": {
+    "default": true,
+    "type": "boolean"
+   },
+   "output_mode": {
+    "default": "video",
+    "enum": [
+     "video",
+     "audio-stems"
+    ],
+    "type": "string"
+   },
+   "channel_mode": {
+    "default": "stereo",
+    "enum": [
+     "stereo",
+     "mono"
+    ],
+    "type": "string"
+   },
+   "image": {
+    "anyOf": [
+     {
+      "maxLength": 8192,
+      "media_kinds": [
+       "image"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   },
+   "last_frame_image": {
+    "anyOf": [
+     {
+      "maxLength": 8192,
+      "media_kinds": [
+       "image"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     },
+     {
+      "type": "null"
+     }
+    ],
+    "default": null
+   }
+  },
+  "required": [
+   "prompt"
+  ],
+  "type": "object"
+ }
+}

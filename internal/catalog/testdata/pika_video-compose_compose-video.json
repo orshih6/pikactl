@@ -1,0 +1,237 @@
+{
+ "api_id": "pika/video-compose/compose-video",
+ "vendor": "pika",
+ "function": "compose-video",
+ "category": "video",
+ "name": "Pika Video Compose",
+ "display_pricing": {
+  "components": [
+   {
+    "role": "output",
+    "unit": {
+     "type": "output_second",
+     "quantity": 1,
+     "included": 0
+    },
+    "starting_at": {
+     "spec": {},
+     "sell_usd": "0.0002",
+     "micro_usd": 200
+    },
+    "price_tiers": [
+     {
+      "spec": {},
+      "sell_usd": "0.0002",
+      "micro_usd": 200
+     }
+    ]
+   }
+  ]
+ },
+ "call": {
+  "method": "POST",
+  "path": "/v1/media/pika/video-compose/compose-video"
+ },
+ "input_schema": {
+  "$defs": {
+   "ComposeAudioKeyframe": {
+    "additionalProperties": false,
+    "properties": {
+     "timestamp": {
+      "minimum": 0,
+      "type": "number"
+     },
+     "duration": {
+      "minimum": 1,
+      "type": "number"
+     },
+     "url": {
+      "maxLength": 4096,
+      "media_kinds": [
+       "audio"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     }
+    },
+    "required": [
+     "timestamp",
+     "duration",
+     "url"
+    ],
+    "type": "object"
+   },
+   "ComposeAudioTrack": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": {
+      "const": "audio",
+      "type": "string"
+     },
+     "keyframes": {
+      "items": {
+       "$ref": "#/$defs/ComposeAudioKeyframe"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "type",
+     "keyframes"
+    ],
+    "type": "object"
+   },
+   "ComposeImageKeyframe": {
+    "additionalProperties": false,
+    "properties": {
+     "timestamp": {
+      "minimum": 0,
+      "type": "number"
+     },
+     "duration": {
+      "minimum": 1,
+      "type": "number"
+     },
+     "url": {
+      "maxLength": 4096,
+      "media_kinds": [
+       "image"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     }
+    },
+    "required": [
+     "timestamp",
+     "duration",
+     "url"
+    ],
+    "type": "object"
+   },
+   "ComposeImageTrack": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": {
+      "const": "image",
+      "type": "string"
+     },
+     "keyframes": {
+      "items": {
+       "$ref": "#/$defs/ComposeImageKeyframe"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "type",
+     "keyframes"
+    ],
+    "type": "object"
+   },
+   "ComposeVideoKeyframe": {
+    "additionalProperties": false,
+    "properties": {
+     "timestamp": {
+      "minimum": 0,
+      "type": "number"
+     },
+     "duration": {
+      "minimum": 1,
+      "type": "number"
+     },
+     "url": {
+      "maxLength": 4096,
+      "media_kinds": [
+       "video"
+      ],
+      "pattern": "^https?://",
+      "type": "string"
+     }
+    },
+    "required": [
+     "timestamp",
+     "duration",
+     "url"
+    ],
+    "type": "object"
+   },
+   "ComposeVideoTrack": {
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "type": "string"
+     },
+     "type": {
+      "const": "video",
+      "type": "string"
+     },
+     "keyframes": {
+      "items": {
+       "$ref": "#/$defs/ComposeVideoKeyframe"
+      },
+      "maxItems": 32,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "id",
+     "type",
+     "keyframes"
+    ],
+    "type": "object"
+   }
+  },
+  "additionalProperties": false,
+  "properties": {
+   "tracks": {
+    "items": {
+     "discriminator": {
+      "mapping": {
+       "audio": "#/$defs/ComposeAudioTrack",
+       "image": "#/$defs/ComposeImageTrack",
+       "video": "#/$defs/ComposeVideoTrack"
+      },
+      "propertyName": "type"
+     },
+     "oneOf": [
+      {
+       "$ref": "#/$defs/ComposeVideoTrack"
+      },
+      {
+       "$ref": "#/$defs/ComposeImageTrack"
+      },
+      {
+       "$ref": "#/$defs/ComposeAudioTrack"
+      }
+     ]
+    },
+    "maxItems": 8,
+    "minItems": 1,
+    "type": "array"
+   }
+  },
+  "required": [
+   "tracks"
+  ],
+  "type": "object"
+ }
+}
