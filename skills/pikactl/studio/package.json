@@ -1,0 +1,23 @@
+{
+  "name": "pikactl-studio",
+  "private": true,
+  "type": "module",
+  "description": "Renders a video from a JSON list of scenes (clips, photos, phone screens, titles, lists) with captions, voice and music. See ../video.md.",
+  "scripts": {
+    "studio": "remotion studio",
+    "check": "tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "@remotion/google-fonts": "4.0.529",
+    "@remotion/media": "4.0.529",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "typescript": "5.9.3"
+  }
+}

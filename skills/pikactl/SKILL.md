@@ -102,6 +102,13 @@ and its output had no audio. When the problem is everywhere in the frame, make t
 For a video made end to end (script, shots, fixes, voice, music, captions, assembly), follow `video.md`
 next to this file. `scripts/video.py` assembles it locally and spends nothing.
 
+`video.md` covers three ways to make the pictures, which can be mixed:
+
+- AI shots.
+- **Image first**: a still from an image model, edited, then animated. This gives the most control.
+- **The studio**: a Remotion project in `studio/` for photos with zooms, phone screenshots, title
+  cards, lists and word-by-word captions.
+
 ## Looking back
 
 ```bash

@@ -194,6 +194,9 @@ It also carries a whole-video workflow (`skills/pikactl/video.md`): script, stor
 for the video, shots, checking every clip, fixes, voice, music, then assembly by
 `skills/pikactl/scripts/video.py` (Python, ffmpeg and Chrome; it spends nothing): captions timed to the
 voice from its transcript, cross-faded shots, music that dips under the voice, and loudness for phones.
+For livelier videos, `skills/pikactl/studio/` is a small Remotion project (run `npm install` in it once)
+that renders a JSON list of scenes: clips, photos with a slow zoom, phone screenshots with a highlight
+and a tap, title cards, lists, and word-by-word captions. `video.py studio` and `video.py render` drive it.
 
 Other assistants that read the same skill format can load that file too. Nothing in it can stop an
 assistant from spending: keep `--max-usd` in mind, and a low balance is your real limit.

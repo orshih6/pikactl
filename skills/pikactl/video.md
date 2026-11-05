@@ -8,6 +8,18 @@ them locally and spends nothing. It needs ffmpeg and Chrome or Chromium. Work in
 The rules of `SKILL.md` hold throughout. The one difference is how money is approved: **one budget per
 video** (step 2).
 
+## Three ways to make the pictures (mix them freely)
+
+| Route | When | Assembled by |
+|---|---|---|
+| **AI shots**: text-to-video per line | Scenes that only need to look right in general | `video.py build` (line captions), or the studio |
+| **Image first**: a still from an image model, checked and edited, then animated | A shot that must look exactly right, the same place or person in several shots, or a detail a video edit can't fix | either |
+| **Studio**: Remotion scenes (photos with a slow zoom, phone screenshots with a highlight and a tap, title cards, lists, word-by-word captions) | How-tos with real screenshots, lists, text-led videos, or any of the above with livelier captions | `video.py studio` + `video.py render` |
+
+The studio is a small Remotion project in `studio/` next to this file. Install it once with
+`npm install` in that folder (Node 18+). Remotion is free for individuals and small companies; larger
+companies need a licence (remotion.dev/license).
+
 ## 1. Brief and script
 
 - Ask only what changes the video: topic, audience and language, length, aspect ratio, voice or not,
@@ -54,6 +66,22 @@ pikactl history --note "city-2050" --limit 0     # every request of this video, 
 - Run independent shots in parallel (one background job each) and check each one's charge.
 - Where a model offers a cheap draft resolution and a "draft to video" finish, try an idea cheaply first
   and finish only the take you keep (read that operation's `--help` for how to pass the draft).
+
+### Image first
+
+1. Make the still with an image model, in the video's aspect ratio. Images cost cents, so try a few
+   prompts.
+2. Look at it, and fix it with an image-editing operation (`--image-urls`). Edits on a still are far
+   more precise than edits on a video: remove a sign, change a colour, add a person.
+3. Animate it with an image-to-video operation (`--image`, and `--last-frame-image` to say where it
+   ends), or animate several stills in order with a keyframes operation. The same still can open several
+   shots, which keeps a place or a person the same across them.
+
+```bash
+pikactl run <image-model> --prompt @prompts/3-square.txt --aspect-ratio 9:16 --note "city-2050: still 3" --yes -o stills/3.png
+pikactl run <image-edit-model> --image-urls stills/3.png --prompt "remove the red lanterns; keep everything else" --note "city-2050: still 3 fix" --yes -o stills/3b.png
+pikactl run <video-model-image-to-video> --image stills/3b.png --prompt "slow crane up, light snow" --duration 5 --aspect-ratio 9:16 --note "city-2050: shot 3" --yes -o clips/3.mp4
+```
 
 ## 4. Look at every clip before using it
 
@@ -117,8 +145,38 @@ python3 scripts/video.py check out/video.mp4      # length, loudness, the first 
 ```
 
 `timing` prints each caption with what the transcript heard, which shows mispronounced words in one
-place. `build` never fades in from black: on most feeds the first frame is the cover, so it shows the
-first shot with the opening question already on it. Loudness is normalised for phones (-15 LUFS).
+place. It also times every caption word in the caption's own spelling (a year shown as digits gets the
+time of the spoken words), for word-by-word captions. `build` never fades in from black: on most feeds
+the first frame is the cover, so it shows the first shot with the opening question already on it.
+Loudness is normalised for phones (-15 LUFS).
+
+### With the studio
+
+```bash
+python3 scripts/video.py studio project.json      # the same project as studio.json (set "caption_mode": "words" for word-by-word)
+python3 scripts/video.py render studio.json -o out/video.mp4    # Remotion, then loudness
+```
+
+`studio.json` is plain JSON, typed and explained in `studio/src/types.ts`. Edit it before rendering to
+add scenes or change them. Its parts:
+
+- **Scenes**, each with `from` and `duration` in seconds:
+  - `video`: a clip;
+  - `image`: a photo with a slow zoom (`zoom`, `focus`, `fit: "blur"` for a picture that doesn't fill
+    the frame);
+  - `screen`: a phone screenshot, with a `highlight` box the camera moves in on and a `tap`;
+  - `title`: a big line and a smaller one;
+  - `list`: items that appear one after another.
+- **Captions**: `"lines"` or `"words"`, with `emphasis` words drawn bigger.
+- **Sound**: `voice`, `music` (it dips when the voice speaks) and `sfx` at set times.
+- **Look**: `labels`, `font` (Montserrat, Inter, Roboto, Rubik: all cover Latin and Cyrillic) and
+  `accent`.
+
+Media paths are relative to the spec's folder. Positions inside a screenshot are fractions: a box whose
+left edge is 40 px into a 1179 px-wide screenshot has `x` 0.034. Measure on the image rather than
+guessing, because a row too low is a highlight on the wrong line. Real screenshots come from the phone
+itself (taken there and sent over). A mirroring tool's small previews are too soft for video. The
+fonts load from Google Fonts while rendering, so it needs the network.
 
 ## 9. Final check and hand-over
 

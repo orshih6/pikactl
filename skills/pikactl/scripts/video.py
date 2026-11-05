@@ -8,7 +8,10 @@ with pikactl. See ../video.md for the whole workflow.
   video.py sheet CLIP... -o sheet.png [--frames 3]   frames from each clip, to look at before using it
   video.py timing project.json                       caption and shot times from the voice's transcript
   video.py overlays project.json                     caption images (PNG with transparency)
-  video.py build project.json                        the finished video
+  video.py build project.json                        the finished video (ffmpeg: clips, line captions)
+  video.py studio project.json [-o studio.json]      the same project as a studio spec (Remotion), to render
+                                                     as is or to add photos, phone screens, titles and lists
+  video.py render studio.json [-o out/video.mp4]     render a studio spec (needs `npm install` in ../studio)
   video.py check VIDEO                               length, loudness, size, and the first frame
 
 project.json (paths are relative to the file):
@@ -135,6 +138,33 @@ def tokens(text):
     return [t for t in re.split(r"[^\w]+", text.lower()) if t]
 
 
+def caption_words(cap, spoken, spans, at):
+    """Times for each word of a caption as shown, matched to the spoken words of its piece."""
+    shown = cap.split()
+    toks, owner = [], []
+    for i, w in enumerate(shown):
+        for t in tokens(w):
+            toks.append(t)
+            owner.append(i)
+    times = [None] * len(shown)
+    sm = difflib.SequenceMatcher(None, toks, spoken, autojunk=False)
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag not in ("equal", "replace") or j2 <= j1:
+            continue
+        for x in range(i1, i2):
+            a, b = spans[j1 + (x - i1)] if tag == "equal" else (spans[j1][0], spans[j2 - 1][1])
+            cur = times[owner[x]]
+            times[owner[x]] = (a, b) if cur is None else (min(cur[0], a), max(cur[1], b))
+    out = []
+    for i, w in enumerate(shown):
+        if times[i] is None:     # an emoji or a word not said: stick it to its neighbour
+            prev = next((times[j] for j in range(i - 1, -1, -1) if times[j]), None)
+            nxt = next((times[j] for j in range(i + 1, len(shown)) if times[j]), None)
+            times[i] = (prev[1], prev[1] + 0.2) if prev else (nxt[0] - 0.2, nxt[0]) if nxt else (spans[0][0], spans[-1][1])
+        out.append({"text": w, "start": round(times[i][0] + at, 3), "end": round(times[i][1] + at, 3)})
+    return out
+
+
 def cmd_timing(a):
     pr = Project(a.project)
     p = pr.p
@@ -191,7 +221,7 @@ def cmd_timing(a):
     for i, cap, n in pieces:
         s = span[k:k + n]
         a0, b0 = min(x[0] for x in s) + at, max(x[1] for x in s) + at
-        caps.append({"text": cap, "a": a0, "b": b0})
+        caps.append({"text": cap, "a": a0, "b": b0, "words": caption_words(cap, script[k:k + n], s, at)})
         lo, hi = line_span.get(i, (a0, b0))
         line_span[i] = (min(lo, a0), max(hi, b0))
         heard_text = " ".join(w["text"] for w in words if a0 - at - 0.01 <= w["start"] and w["end"] <= b0 - at + 0.01)
@@ -204,7 +234,8 @@ def cmd_timing(a):
     for n, c in enumerate(caps):
         nxt = caps[n + 1]["a"] - 0.05 if n + 1 < len(caps) else voice_end + 0.35
         out_caps.append({"text": c["text"], "start": 0.0 if n == 0 else round(c["a"] - 0.08, 3),
-                         "end": round(max(c["b"] + 0.15, nxt), 3), "style": "hook" if n == 0 else "line"})
+                         "end": round(max(c["b"] + 0.15, nxt), 3), "style": "hook" if n == 0 else "line",
+                         "words": c["words"]})
     if p.get("end_caption"):
         out_caps.append({"text": p["end_caption"], "start": round(voice_end + 0.4, 3), "end": round(total - 0.1, 3),
                          "style": "line"})
@@ -350,6 +381,64 @@ def cmd_build(a):
     print(out)
 
 
+# --- studio (Remotion) -------------------------------------------------------------------------
+
+STUDIO = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "studio")
+
+
+def cmd_studio(a):
+    """Write a studio spec from a project and its timeline, to render as is or to add scenes to."""
+    pr = Project(a.project)
+    p, tl = pr.p, pr.timeline()
+    xf = p.get("crossfade", 0.4)
+    scenes, t = [], 0.0
+    for i, sh_ in enumerate(tl["shots"]):
+        clip = pr.rel(sh_["clip"])
+        start = sh_.get("clip_start", 0)
+        need = sh_["dur"] + (xf if i < len(tl["shots"]) - 1 else 0)
+        have = min(duration(clip) - start - 0.05, sh_.get("clip_use", 1e9))
+        scene = {"type": "video", "from": round(t, 3), "duration": sh_["dur"],
+                 "src": os.path.relpath(clip, pr.dir), "start": start}
+        if have < need:
+            scene["rate"] = round(have / need, 3)      # slower, to fill the scene
+        scenes.append(scene)
+        t += sh_["dur"]
+    spec = {"width": pr.w, "height": pr.h, "fps": p.get("fps", 30), "duration": tl["total"],
+            "crossfade": xf, "scenes": scenes,
+            "captions": {"mode": p.get("caption_mode", "lines"), "items": tl["captions"]}}
+    if p.get("corner_left") or p.get("corner_right"):
+        spec["labels"] = {k: v for k, v in (("left", p.get("corner_left")), ("right", p.get("corner_right"))) if v}
+    if p.get("voice"):
+        spec["voice"] = {"src": p["voice"]["file"], "at": p["voice"].get("at", 0.4)}
+    m = p.get("music")
+    if m and os.path.exists(pr.rel(m["file"])):
+        spec["music"] = {"src": m["file"], "volume": round(10 ** (m.get("gain_db", -12) / 20), 3), "duck": 0.35}
+    spec.update(p.get("studio", {}))           # font, accent, emphasis… from the project
+    out = pr.rel(a.output or "studio.json")
+    json.dump(spec, open(out, "w"), ensure_ascii=False, indent=1)
+    print(out)
+
+
+def cmd_render(a):
+    """Render a studio spec with Remotion; media paths in it are relative to the spec's folder."""
+    spec_path = os.path.abspath(a.spec)
+    folder = os.path.dirname(spec_path)
+    spec = json.load(open(spec_path))
+    if not os.path.isdir(os.path.join(STUDIO, "node_modules")):
+        die(f"the studio is not installed: run `npm install` in {STUDIO}")
+    out = os.path.abspath(a.output or os.path.join(folder, "out", "studio.mp4"))
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    raw = out + ".raw.mp4"
+    r = subprocess.run(["npx", "remotion", "render", "src/index.ts", "Video", raw, f"--props={spec_path}",
+                        f"--public-dir={folder}", "--log=error"], cwd=STUDIO)
+    if r.returncode != 0:
+        die("remotion render failed (its message is above)")
+    ffmpeg(["-i", raw, "-c:v", "copy", "-af", f"loudnorm=I={spec.get('loudness', -15)}:TP=-1.5:LRA=11",
+            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out])
+    os.remove(raw)
+    print(out)
+
+
 # --- check -------------------------------------------------------------------------------------
 
 def cmd_check(a):
@@ -376,13 +465,19 @@ def main():
     s.add_argument("--width", type=int, default=240)
     for name in ("timing", "overlays", "build"):
         sub.add_parser(name).add_argument("project")
+    st = sub.add_parser("studio")
+    st.add_argument("project")
+    st.add_argument("-o", "--output")
+    rn = sub.add_parser("render")
+    rn.add_argument("spec")
+    rn.add_argument("-o", "--output")
     sub.add_parser("check").add_argument("video")
     a = ap.parse_args()
     for tool in ("ffmpeg", "ffprobe"):
         if not shutil.which(tool):
             die(f"{tool} is not installed")
     {"sheet": cmd_sheet, "timing": cmd_timing, "overlays": cmd_overlays, "build": cmd_build,
-     "check": cmd_check}[a.cmd](a)
+     "studio": cmd_studio, "render": cmd_render, "check": cmd_check}[a.cmd](a)
 
 
 if __name__ == "__main__":
