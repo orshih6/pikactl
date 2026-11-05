@@ -1,6 +1,6 @@
 ---
 name: pikactl
-description: "Use when the user wants to generate or edit media through the Pika API (dev.pika.art): video, images, music, speech, sound effects, transcription, dubbing, lipsync, upscaling, captions, merging or composing clips, including third-party models it hosts such as Seedance, Veo, Kling, Wan, GPT Image or ElevenLabs. Also for Pika API prices, balance and spend, for what was generated before, or to call a language or decision model through a Pika API key. Do it all with the pikactl CLI. Not for Pika's consumer app (pika.art) or its MCP plugin, which use a separate account and credits."
+description: "Use when the user wants to generate or edit media through the Pika API (dev.pika.art): video, images, music, speech, sound effects, transcription, dubbing, lipsync, upscaling, captions, merging or composing clips, editing a clip (replace, add or remove something, restyle, extend), or making a whole video end to end (script, shots, voice, music, captions, assembly), including third-party models it hosts such as Seedance, Veo, Kling, Wan, GPT Image or ElevenLabs. Also for Pika API prices, balance and spend, for what was generated before, or to call a language or decision model through a Pika API key. Do it all with the pikactl CLI. Not for Pika's consumer app (pika.art) or its MCP plugin, which use a separate account and credits."
 ---
 
 # pikactl
@@ -25,7 +25,11 @@ a file. Browsing models and getting quotes need no key.
    the user the operation, the settings that matter, how many requests, and the quoted price. Pass
    `--yes` only after they have agreed to that request, and pass `--max-usd` with it.
 2. **One yes covers one request.** Extra variants, a batch, or a retry at a different setting each
-   need their own. Agreeing to a video does not agree to re-rolling it.
+   need their own. Agreeing to a video does not agree to re-rolling it. The one exception is a
+   **budget for a project**, such as a whole video (`video.md`): when the user approves a plan with a
+   total, that yes covers the requests in the plan while the total spent stays inside it. Label each one
+   with `--note "<project>: <step>"` and check the spend with `pikactl history --note <project>`. Going
+   over, anything outside the plan, and any retry after a failure still need a new yes.
 3. **Do not answer from memory.** Models, inputs and prices change: read them with `pikactl models`,
    `pikactl run <id> --help` and `pikactl quote`. Recommend one model, with one alternative only when
    the tradeoff in quality, speed or cost is worth raising.
@@ -75,11 +79,35 @@ request) and join them with `pikactl models merge` or `pikactl models compose` t
 Read its `--help` first: it needs a total length it can price, and its quote can be far above the real
 charge when the clips' lengths are not known up front.
 
+## Changing a video you already have
+
+Look for these in `pikactl models --category video`, and read each one's `--help` (names and limits
+change):
+
+- **Replace or remove one area or subject**: a swap operation such as Pikaswaps, with the area given in
+  words or as a mask image.
+- **Add a subject**: Pikadditions.
+- **Rewrite the whole clip** from a prompt (season, time of day, style): the "Video Editing" operations.
+- **Make it longer**: a "Video Extension", or a video-to-video operation that continues a clip.
+- **Sharper or smoother**: a video upscale. **Join or lay out clips**: merge and compose. **Make a
+  picture speak**: the avatar and lipsync operations.
+
+None of them edits only a time range: cut that piece out with ffmpeg, edit it, and put it back. Each
+edit is a new generation that can change more than you asked, so look at the result. They work best on
+one clear subject: a swap told in words to remove many small objects across a street left them in place,
+and its output had no audio. When the problem is everywhere in the frame, make the shot again.
+
+## A whole video
+
+For a video made end to end (script, shots, fixes, voice, music, captions, assembly), follow `video.md`
+next to this file. `scripts/video.py` assembles it locally and spends nothing.
+
 ## Looking back
 
 ```bash
 pikactl history                            # newest first: status, cost, prompt
 pikactl history --op h3-flex --since 7d
+pikactl history --note "city-2050" --limit 0   # one project's requests and its total charge
 pikactl history show <ref>                 # the full request, charge and files
 pikactl history rerun <ref> --set seed=7 --max-usd 0.10 --yes     # a new paid job: rule 2 applies
 pikactl history sync                       # catch up on jobs left running

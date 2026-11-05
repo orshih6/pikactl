@@ -17,7 +17,7 @@ import (
 
 func newHistoryCommand() *cobra.Command {
 	var limit int
-	var op, status, since string
+	var op, status, since, note string
 	cmd := &cobra.Command{
 		Use:   "history",
 		Short: "List everything requested so far, with prompts, costs and files",
@@ -26,6 +26,7 @@ func newHistoryCommand() *cobra.Command {
 			"Lines file that nothing rewrites; deleting a job on Pika's side keeps its entry.",
 		Example: `  pikactl history
   pikactl history --op h3-flex --status completed --since 7d
+  pikactl history --note "paper boat ad" --limit 0     # one project's requests and its total spend
   pikactl history show 20261031-151023-a1b2c3
   pikactl history rerun 20261031-151023-a1b2c3 --set seed=7`,
 		Args: cobra.NoArgs,
@@ -52,6 +53,9 @@ func newHistoryCommand() *cobra.Command {
 					continue
 				}
 				if status != "" && r.Status != status {
+					continue
+				}
+				if note != "" && !strings.Contains(strings.ToLower(r.Note), strings.ToLower(note)) {
 					continue
 				}
 				if !cutoff.IsZero() && r.CreatedAt.Before(cutoff) {
@@ -97,6 +101,7 @@ func newHistoryCommand() *cobra.Command {
 	cmd.Flags().StringVar(&op, "op", "", "only operations containing this text")
 	cmd.Flags().StringVar(&status, "status", "", "only this status, such as completed or failed")
 	cmd.Flags().StringVar(&since, "since", "", "only since this long ago (7d, 24h) or this date (2026-10-31)")
+	cmd.Flags().StringVar(&note, "note", "", "only requests whose --note contains this text (any case), e.g. a project's name")
 	cmd.AddCommand(newHistoryShowCommand(), newHistoryRerunCommand(), newHistorySyncCommand())
 	return cmd
 }

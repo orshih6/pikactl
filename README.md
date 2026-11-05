@@ -118,6 +118,7 @@ write fails, the request is not sent.
 ```sh
 pikactl history                             # newest first, with cost and prompt
 pikactl history --op h3-flex --since 7d     # filter by operation, status or age
+pikactl history --note city-2050 --limit 0   # one project's requests and its total charge
 pikactl history show <ref>                  # the full request, cost and files
 pikactl history rerun <ref> --set seed=7    # the same request again, as a new paid job
 pikactl history sync                        # catch up on jobs left running: status, charge, files
@@ -180,13 +181,19 @@ pikactl api POST /v1/chat/completions -d @request.json --yes
 ## Use with an AI assistant
 
 `skills/pikactl/SKILL.md` teaches an assistant to use pikactl and to be careful with your money: it
-quotes before running, treats one approval as covering one request, and never asks you to paste your
+quotes before running, treats one approval as covering one request (or one agreed budget for a
+project), and never asks you to paste your
 key into the chat. For Claude Code:
 
 ```sh
 git clone https://github.com/orshih6/pikactl
 mkdir -p ~/.claude/skills && cp -R pikactl/skills/pikactl ~/.claude/skills/
 ```
+
+It also carries a whole-video workflow (`skills/pikactl/video.md`): script, storyboard and one budget
+for the video, shots, checking every clip, fixes, voice, music, then assembly by
+`skills/pikactl/scripts/video.py` (Python, ffmpeg and Chrome; it spends nothing): captions timed to the
+voice from its transcript, cross-faded shots, music that dips under the voice, and loudness for phones.
 
 Other assistants that read the same skill format can load that file too. Nothing in it can stop an
 assistant from spending: keep `--max-usd` in mind, and a low balance is your real limit.

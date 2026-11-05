@@ -10,7 +10,7 @@ import (
 // over checking. These tests fail when it, or the README, mentions a command
 // or flag that does not exist.
 func TestDocumentedCommandsExist(t *testing.T) {
-	for _, path := range []string{"../../skills/pikactl/SKILL.md", "../../README.md"} {
+	for _, path := range []string{"../../skills/pikactl/SKILL.md", "../../skills/pikactl/video.md", "../../README.md"} {
 		commands := documentedCommands(t, path)
 		if len(commands) < 5 {
 			t.Fatalf("%s: found only %d commands, so this test has stopped reading it", path, len(commands))

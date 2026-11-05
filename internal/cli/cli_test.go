@@ -760,6 +760,13 @@ func TestHistoryListAndShow(t *testing.T) {
 	if out, _ := mustRun(t, "history", "--limit", "1"); strings.Contains(out, "a paper boat") {
 		t.Errorf("limit ignored:\n%s", out)
 	}
+	out, errOut = mustRun(t, "history", "--note", "LABEL")
+	if !strings.Contains(out, "labelled") || strings.Contains(out, "a paper boat") {
+		t.Errorf("--note should keep only the labelled request:\n%s", out)
+	}
+	if !strings.Contains(errOut, "across all 1") {
+		t.Errorf("--note total should count only the labelled request: %s", errOut)
+	}
 
 	ref := loadHistory(t)[0].Ref
 	out, _ = mustRun(t, "history", "show", ref)
